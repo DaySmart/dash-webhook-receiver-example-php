@@ -12,7 +12,6 @@
 .codex
 .cursor
 
-docker
 docker-compose*.yml
 
 node_modules
