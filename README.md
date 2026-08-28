@@ -13,6 +13,7 @@ It demonstrates:
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-started/get-docker/) and Docker Compose v2
+- [ngrok](https://ngrok.com/download) (or another HTTPS tunnel) — only needed if you're pointing a **real** Dash sender at this app rather than testing locally; see [Pointing the sender at this app](#pointing-the-sender-at-this-app)
 
 ## Quick start
 
@@ -76,10 +77,17 @@ The image is built with a [`.dockerignore`](.dockerignore) that excludes `.git`,
 
 ## Pointing the sender at this app
 
-1. Create a webhook subscription on the sender with `url: http://<your-host>:8000/webhooks`
-2. The sender performs an OPTIONS handshake — this app responds with `200 OK` and the `WebHook-Allowed-Origin` / `WebHook-Allowed-Rate` headers
-3. Once validated, the sender will POST CloudEvents v1.0 payloads to `/webhooks`
-4. Verified events appear in the dashboard within 3 seconds
+Dash requires subscription URLs to be `https://` in real (non-local) environments, so a bare `http://localhost:8000/webhooks` only works if the sender and this app are on the same machine. To receive a real staging webhook from a sender you don't control, tunnel the app to a public HTTPS URL with ngrok:
+
+1. Start the app: `docker compose up --build` (it's listening on `http://localhost:8000`)
+2. In a separate terminal, tunnel port `8000`: `ngrok http 8000`
+3. ngrok prints a forwarding URL like `https://abcd1234.ngrok-free.app` — this is public and HTTPS. Nothing on the app side needs to change to accept it: nginx isn't restricted to a specific `server_name` (`docker/nginx.conf`), and signature verification derives `@authority` from whatever `Host` header the request actually arrives with (`WEBHOOK_SENDER_ORIGIN` in `.env` only checks the sender's `WebHook-Request-Origin` header, not your tunnel's hostname)
+4. Create the webhook subscription on the sender with `url: https://abcd1234.ngrok-free.app/webhooks` (use your own forwarding URL, and keep the trailing `/webhooks`)
+5. The sender performs an OPTIONS handshake — this app responds with `200 OK` and the `WebHook-Allowed-Origin` / `WebHook-Allowed-Rate` headers
+6. Once validated, the sender will POST CloudEvents v1.0 payloads through the tunnel to `/webhooks`
+7. Verified events appear in the dashboard at `http://localhost:8000` within 3 seconds
+
+ngrok's free tier reissues a new random URL every time you restart it, so you'll need to update the sender's subscription URL each session — a paid plan's static domain avoids that if you're doing this repeatedly.
 
 ## Configuration
 
@@ -140,7 +148,7 @@ Retries reuse the sender's `WebHook-ID`. Whatever outcome was stored for the **f
 
 The dashboard at `GET /` has **no authentication** and can display the raw payload and headers of every delivery, so treat it accordingly:
 
-- Run it only on `localhost` or behind a tool like ngrok for local testing — never expose it directly to the internet. `robots.txt` also disallows indexing as a backstop, but that isn't a substitute for not exposing it.
+- Run it only on `localhost` when possible. If you tunnel it with ngrok to receive a real staging webhook (see [Pointing the sender at this app](#pointing-the-sender-at-this-app)), the forwarding URL is reachable by anyone who has it for as long as the tunnel is up — don't add ngrok's `--basic-auth` or an OAuth wall, since the sender can't authenticate to those and its requests would never reach the app. Keep the exposure window short: only start the tunnel while you're actively capturing a delivery, and stop it once you're done. `robots.txt` also disallows indexing as a backstop, but that isn't a substitute for not exposing it.
 - The `Authorization`, `Cookie`, and `Proxy-Authorization` request headers are redacted before being persisted, since Dash sends the subscription's Bearer secret as `Authorization` on every delivery and that secret is otherwise only ever shown once at subscription creation.
 - Adding a real login to the dashboard is out of scope for this reference implementation — if you deploy it as a long-running service rather than a local debugging tool, put it behind your own authentication (e.g. a reverse proxy with basic auth, or a VPN).
 
