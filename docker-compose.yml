@@ -5,6 +5,7 @@ services:
       target: dev
     volumes:
       - .:/var/www/html
+      - vendor:/var/www/html/vendor
     environment:
       XDEBUG_MODE: "${XDEBUG_MODE:-debug,develop}"
       DB_CONNECTION: mysql
@@ -44,3 +45,4 @@ services:
 
 volumes:
   db_data:
+  vendor:
