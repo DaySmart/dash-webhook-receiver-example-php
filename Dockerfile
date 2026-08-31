@@ -22,7 +22,9 @@ CMD ["php-fpm"]
 # dev: Xdebug + full (dev) Composer dependencies, unoptimised autoloader.
 # Used by docker-compose for local development; the source tree is bind
 # mounted over this at runtime, so the COPY/composer install below just
-# make `docker build --target dev .` usable on its own too.
+# make `docker build --target dev .` usable on its own too. Composer itself
+# is kept in the image (not just mounted for this RUN step) so it's still
+# available at runtime for `composer require`/`composer update`.
 # ---------------------------------------------------------------------------
 FROM base AS dev
 
@@ -31,12 +33,13 @@ RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS linux-headers \
     && docker-php-ext-enable xdebug \
     && apk del .build-deps
 
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
 COPY docker/xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
 
 COPY . .
 
-RUN --mount=type=bind,from=composer:2,source=/usr/bin/composer,target=/usr/bin/composer \
-  composer install --no-interaction --prefer-dist
+RUN composer install --no-interaction --prefer-dist
 
 RUN chown -R www-data:www-data storage bootstrap/cache
 
