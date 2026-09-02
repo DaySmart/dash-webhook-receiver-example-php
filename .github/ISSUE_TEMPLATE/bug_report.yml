@@ -1,0 +1,64 @@
+name: Bug Report
+description: Report something that doesn't work as expected in this reference implementation.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a report. If this is a **security vulnerability**
+        (e.g. a flaw in the RFC 9421 signature verification), please do not open a public issue —
+        see [SECURITY.md](../../SECURITY.md) instead.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Include request payloads, headers, or commands where relevant.
+      placeholder: |
+        1. Send a webhook with headers ...
+        2. Run `docker compose up --build`
+        3. See error ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or output
+      render: shell
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: The tag, release, or commit SHA you're running.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: How are you running the app?
+      options:
+        - Docker Compose (as documented in the README)
+        - Other (describe below)
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else that might help, e.g. .env settings (redact secrets).
+    validations:
+      required: false
