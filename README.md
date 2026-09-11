@@ -42,38 +42,7 @@ To disable Xdebug (e.g. for a quick perf check), set in `.env`:
 XDEBUG_MODE=off
 ```
 
-The `production` target (used for the [published image](#using-the-published-docker-image)) skips Xdebug and dev dependencies entirely.
-
-## Using the published Docker image
-
-Every published [release](https://github.com/DaySmart/dash-webhook-receiver-example-php/releases) builds and pushes an image to GitHub Container Registry, so you don't have to build it yourself:
-
-```
-ghcr.io/daysmart/dash-webhook-receiver-example-php
-```
-
-Available tags:
-
-| Tag                   | Meaning                                      |
-|-----------------------|----------------------------------------------|
-| `latest`              | Most recent non-prerelease release           |
-| `vMAJOR.MINOR.PATCH`  | An exact release, e.g. `v1.2.3`              |
-| `vMAJOR.MINOR`        | Latest patch within that minor version       |
-| `vMAJOR`              | Latest minor/patch within that major version |
-
-The image only contains PHP-FPM (listening on port `9000`, not HTTP) — it needs a web server in front of it that proxies `.php` requests over FastCGI, and a MySQL database. The simplest way to run it is to reuse the same [`docker-compose.yml`](docker-compose.yml) setup from the quick start, swapping the `app` service's `build:` block for the published image (it's built from the `production` target, so no dev dependencies or Xdebug):
-
-```yaml
-services:
-  app:
-    image: ghcr.io/daysmart/dash-webhook-receiver-example-php:latest
-    # ...rest of the app service unchanged (volumes, env_file, depends_on, restart)
-    # drop `environment: XDEBUG_MODE` and `extra_hosts` — not used by this image
-```
-
-Then run `docker compose up` (no `--build` needed) from a checkout that still has `.env` and `docker/nginx.conf` in place, since the `web` and `app` services mount those from the host.
-
-The image is built with a [`.dockerignore`](.dockerignore) that excludes `.git`, `.env*`, tests, and CI/editor config from the build context, so building locally with a real `.env` present won't bake `APP_KEY`, `WEBHOOK_SECRET`, or anything else in it into the image. The entrypoint also runs whatever command the image is given (`docker run ghcr.io/daysmart/dash-webhook-receiver-example-php php artisan migrate:status`, for example) rather than always launching `php-fpm`.
+The `production` target skips Xdebug and dev dependencies entirely.
 
 ## Pointing the sender at this app
 
